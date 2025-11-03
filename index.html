@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPI Programming Examples</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 MPI Programming Examples</h1>
+            <p class="subtitle">A collection of MPI (Message Passing Interface) programs demonstrating parallel computing concepts</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="program5">Program 5: Send/Receive</button>
+            <button class="tab-btn" data-tab="program6">Program 6: Deadlock Prevention</button>
+            <button class="tab-btn" data-tab="program7">Program 7: Broadcast</button>
+            <button class="tab-btn" data-tab="program8">Program 8: Scatter/Gather</button>
+            <button class="tab-btn" data-tab="program9">Program 9: Reduce/Allreduce</button>
+        </nav>
+
+        <main>
+            <!-- Program 5 -->
+            <div class="program-section active" id="program5">
+                <div class="program-header">
+                    <h2>Program 5: Basic Send and Receive</h2>
+                    <p class="description">Demonstrates basic point-to-point communication using MPI_Send and MPI_Recv between two processes.</p>
+                </div>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="filename">program5.c</span>
+                        <button class="copy-btn" onclick="copyCode('code5')">📋 Copy</button>
+                    </div>
+                    <pre><code id="code5" class="language-c">#include &lt;mpi.h&gt;
+#include &lt;stdio.h&gt;
+int main(int argc, char** argv) {
+int rank, size;
+int number;
+MPI_Init(&amp;argc, &amp;argv); // Initialize MPI environment
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank); // Get current process ID
+MPI_Comm_size(MPI_COMM_WORLD, &amp;size); // Get total number of processes
+if (size &lt; 2) {
+if (rank == 0) {
+printf("This program requires at least 2 processes.\n");
+}
+MPI_Finalize();
+return 0;
+}
+if (rank == 0) {
+number = 100; // Message to send
+printf("Process 0 sending number %d to Process 1\n", number);
+MPI_Send(&amp;number, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+} else if (rank == 1) {
+MPI_Recv(&amp;number, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+printf("Process 1 received number %d from Process 0\n", number);
+}
+MPI_Finalize(); // Clean up the MPI environment
+return 0;
+}</code></pre>
+                </div>
+                <div class="compile-section">
+                    <h3>Compilation &amp; Execution</h3>
+                    <pre class="compile-code"><code>mpicc program5.c -o program5
+mpirun -np 2 ./program5</code></pre>
+                </div>
+            </div>
+
+            <!-- Program 6 -->
+            <div class="program-section" id="program6">
+                <div class="program-header">
+                    <h2>Program 6: Deadlock Prevention Pattern</h2>
+                    <p class="description">Demonstrates how to avoid deadlock by carefully ordering send and receive operations between processes.</p>
+                </div>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="filename">program6.c</span>
+                        <button class="copy-btn" onclick="copyCode('code6')">📋 Copy</button>
+                    </div>
+                    <pre><code id="code6" class="language-c">#include &lt;mpi.h&gt;
+#include &lt;stdio.h&gt;
+int main(int argc, char** argv) {
+int rank, size, data = 0;
+MPI_Init(&amp;argc, &amp;argv);
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank); 
+MPI_Comm_size(MPI_COMM_WORLD, &amp;size);
+if (size &lt; 2) {
+printf("This program requires at least 2 processes.\n");
+MPI_Abort(MPI_COMM_WORLD, 1);
+}
+if (rank == 0) {
+// Rank 0 sends first, then receives
+MPI_Send(&amp;data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+printf("Process 0 sent data to Process 1\n");
+MPI_Recv(&amp;data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+printf("Process 0 received data from Process 1\n");
+} else if (rank == 1) {
+// Rank 1 receives first, then sends
+MPI_Recv(&amp;data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+printf("Process 1 received data from Process 0\n");
+MPI_Send(&amp;data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+printf("Process 1 sent data to Process 0\n");
+}
+MPI_Finalize();
+return 0;
+}</code></pre>
+                </div>
+                <div class="compile-section">
+                    <h3>Compilation &amp; Execution</h3>
+                    <pre class="compile-code"><code>mpicc program6.c -o program6
+mpirun -np 2 ./program6</code></pre>
+                </div>
+            </div>
+
+            <!-- Program 7 -->
+            <div class="program-section" id="program7">
+                <div class="program-header">
+                    <h2>Program 7: Broadcast Communication</h2>
+                    <p class="description">Demonstrates one-to-many communication using MPI_Bcast to send data from one process to all other processes.</p>
+                </div>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="filename">program7.c</span>
+                        <button class="copy-btn" onclick="copyCode('code7')">📋 Copy</button>
+                    </div>
+                    <pre><code id="code7" class="language-c">#include &lt;mpi.h&gt;
+#include &lt;stdio.h&gt;
+int main(int argc, char** argv) {
+int rank, size;
+int data; // The data to broadcast
+MPI_Init(&amp;argc, &amp;argv); // Initialize MPI environment
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank); // Get the rank of the process
+MPI_Comm_size(MPI_COMM_WORLD, &amp;size); // Get the number of processes
+if (rank == 0) {
+data = 42; // Root process sets the data
+printf("Process %d is broadcasting data = %d\n", rank, data);
+}
+// Broadcast the data from process 0 to all processes
+MPI_Bcast(&amp;data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+// All processes print the received data
+printf("Process %d received data = %d\n", rank, data);
+MPI_Finalize(); // Finalize the MPI environment
+return 0;
+}</code></pre>
+                </div>
+                <div class="compile-section">
+                    <h3>Compilation &amp; Execution</h3>
+                    <pre class="compile-code"><code>mpicc program7.c -o program7
+mpirun -np 4 ./program7</code></pre>
+                </div>
+            </div>
+
+            <!-- Program 8 -->
+            <div class="program-section" id="program8">
+                <div class="program-header">
+                    <h2>Program 8: Scatter and Gather</h2>
+                    <p class="description">Demonstrates data distribution using MPI_Scatter and data collection using MPI_Gather.</p>
+                </div>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="filename">program8.c</span>
+                        <button class="copy-btn" onclick="copyCode('code8')">📋 Copy</button>
+                    </div>
+                    <pre><code id="code8" class="language-c">#include &lt;stdio.h&gt;
+#include &lt;mpi.h&gt;
+int main(int argc, char** argv) {
+int rank, size;
+int send_data[4] = {10, 20, 30, 40}; // Only root (rank 0) uses this fully
+int recv_data;
+MPI_Init(&amp;argc, &amp;argv);
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+MPI_Comm_size(MPI_COMM_WORLD, &amp;size);
+// Scatter 1 int from root to all processes
+MPI_Scatter(send_data, 1, MPI_INT, &amp;recv_data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+printf("Process %d received: %d\n", rank, recv_data);
+// Each process increments its value
+recv_data += 1;
+// Gather updated values at root
+MPI_Gather(&amp;recv_data, 1, MPI_INT, send_data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+// Root prints the gathered result
+if (rank == 0) {
+printf("Gathered data: ");
+for (int i = 0; i &lt; size; i++)
+printf("%d ", send_data[i]);
+printf("\n");
+}
+MPI_Finalize();
+return 0;
+}</code></pre>
+                </div>
+                <div class="compile-section">
+                    <h3>Compilation &amp; Execution</h3>
+                    <pre class="compile-code"><code>mpicc program8.c -o program8
+mpirun -np 4 ./program8</code></pre>
+                </div>
+            </div>
+
+            <!-- Program 9 -->
+            <div class="program-section" id="program9">
+                <div class="program-header">
+                    <h2>Program 9: Reduce and Allreduce Operations</h2>
+                    <p class="description">Demonstrates collective reduction operations including sum, product, maximum, and minimum using both MPI_Reduce and MPI_Allreduce.</p>
+                </div>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="filename">program9.c</span>
+                        <button class="copy-btn" onclick="copyCode('code9')">📋 Copy</button>
+                    </div>
+                    <pre><code id="code9" class="language-c">#include &lt;mpi.h&gt;
+#include &lt;stdio.h&gt;
+int main(int argc, char** argv) {
+int rank, size;
+int value;
+int sum, prod, max, min;
+int sum_all, prod_all, max_all, min_all;
+MPI_Init(&amp;argc, &amp;argv);
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+MPI_Comm_size(MPI_COMM_WORLD, &amp;size);
+// Each process sets its own value (e.g., rank + 1)
+value = rank + 1;
+printf("Process %d has value %d\n", rank, value);
+// ---------- MPI_Reduce ----------
+MPI_Reduce(&amp;value, &amp;sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+MPI_Reduce(&amp;value, &amp;prod, 1, MPI_INT, MPI_PROD, 0, MPI_COMM_WORLD);
+MPI_Reduce(&amp;value, &amp;max, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+MPI_Reduce(&amp;value, &amp;min, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+if (rank == 0) {
+printf("\n[Using MPI_Reduce at Root Process]\n");
+printf("Sum = %d\n", sum);
+printf("Prod = %d\n", prod);
+printf("Max = %d\n", max);
+printf("Min = %d\n", min);
+}
+// ---------- MPI_Allreduce ----------
+MPI_Allreduce(&amp;value, &amp;sum_all, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+MPI_Allreduce(&amp;value, &amp;prod_all, 1, MPI_INT, MPI_PROD, MPI_COMM_WORLD);
+MPI_Allreduce(&amp;value, &amp;max_all, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+MPI_Allreduce(&amp;value, &amp;min_all, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+printf("\n[Process %d] MPI_Allreduce Results:\n", rank);
+printf(" Sum = %d\n", sum_all);
+printf(" Prod = %d\n", prod_all);
+printf(" Max = %d\n", max_all);
+printf(" Min = %d\n", min_all);
+MPI_Finalize();
+return 0;
+}</code></pre>
+                </div>
+                <div class="compile-section">
+                    <h3>Compilation &amp; Execution</h3>
+                    <pre class="compile-code"><code>mpicc program9.c -o program9
+mpirun -np 4 ./program9</code></pre>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>MPI Programming Examples Collection</p>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
